@@ -1,0 +1,71 @@
+---
+title: "ML"
+output: html_document
+---
+
+
+
+```{r}
+library("caret")
+library("rpart")
+library("rpart.plot")
+library("randomForest")
+trainUrl<-"http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testUrl<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+#download.file(trainUrl, destfile="C:/Users/weibinkelvin/Documents/trainset.csv")
+#download.file(testUrl, destfile="C:/Users/weibinkelvin/Documents/testset.csv")
+trainset<-read.csv("C:/Users/weibinkelvin/Documents/trainset.csv", na.strings=c("NA","#DIV/0!",""))
+testset<-read.csv("C:/Users/weibinkelvin/Documents/testset.csv", na.strings=c("NA","#DIV/0!",""))
+
+trainset<-trainset[,colSums(is.na(trainset)) == 0]
+testset <-testset[,colSums(is.na(testset)) == 0]
+
+trainset   <-trainset[,-c(1:7)]
+testset <-testset[,-c(1:7)]
+
+inTrain <- createDataPartition(y=trainset$classe, p=0.6, list=FALSE)
+myTraining <- trainset[inTrain, ]; 
+myTesting <- trainset[-inTrain, ]
+dim(myTraining)
+dim(myTesting)
+
+plot(myTraining$classe, col="blue", main="Bar Plot of levels of the variable classe within the subTraining data set", xlab="classe levels", ylab="Frequency")
+
+model1 <- rpart(classe ~ ., data=myTraining, method="class")
+
+prediction1 <- predict(model1, myTesting, type = "class")
+
+rpart.plot(model1, main="Classification Tree", extra=102, under=TRUE, faclen=0)
+
+#if image is too small, may consider the below code the generate bigger tree.
+#png("test.png", width=1024, height=800)
+#rpart.plot(model1, main="Classification Tree", extra=102, under=TRUE, faclen=0)
+#dev.off()
+confusionMatrix(prediction1, myTesting$classe)
+```
+
+Prediction using Random Forest
+
+```{r random forest}
+model2 <- randomForest(classe ~. , data=myTraining, method="class")
+prediction2 <- predict(model2, myTesting, type = "class")
+confusionMatrix(prediction2, myTesting$classe)
+```
+
+Conclusion: Random Forest is a better model for the data. 
+
+```{r submission}
+predictfinal<-predict(model2, testset, type="class")
+predictfinal
+
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(predictfinal)
+```
